@@ -46,10 +46,7 @@ add_library(eel2 STATIC
 
 target_include_directories(eel2 PUBLIC ${EEL2_PATH} ${WDL_PATH})
 
-target_compile_definitions(eel2 PRIVATE
-        WDL_FFT_REALSIZE=8
-        _FILE_OFFSET_BITS=64
-)
+target_compile_definitions(eel2 PUBLIC WDL_FFT_REALSIZE=8)
 
 if(NOT MSVC)
     target_compile_options(eel2 PRIVATE

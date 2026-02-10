@@ -1,5 +1,3 @@
-#define WDL_FFT_REALSIZE 8
-
 #include "eel2_adapter.h"
 
 #include "ns-eel-addfuncs.h"

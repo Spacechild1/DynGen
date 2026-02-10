@@ -375,6 +375,29 @@ EEL_F EEL2Adapter::eelLatch(void*, EEL_F* state, EEL_F* signal, EEL_F* trigger) 
     return *state;
 }
 
+// we have to use double* instead of EEL_F* to avoid warnings about attributes in template arguments.
+static std::pair<double*, size_t> getMemoryData(EEL_F** blocks, EEL_F* start, EEL_F* length) {
+    // this is EEL's way of converting a double to an index/offset...
+    const int offset = static_cast<int>(*start + 0.0001);
+    const int size = static_cast<int>(*length + 0.0001);
+
+    if (offset < 0 || size < 0) {
+        return { nullptr, 0 };
+    }
+
+    // check to make sure we don't cross a boundary
+    if ((offset / NSEEL_RAM_ITEMSPERBLOCK) != ((offset + size - 1) / NSEEL_RAM_ITEMSPERBLOCK)) {
+        return { nullptr, 0 };
+    }
+
+    EEL_F* data = __NSEEL_RAMAlloc(blocks, offset);
+    if (!data || data == &nseel_ramalloc_onfail) {
+        return { nullptr, 0 };
+    }
+
+    return { data, size };
+}
+
 EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelPrint(void*, const INT_PTR numParams, EEL_F** params) {
     std::array<char, 2048> buffer;
 
@@ -403,21 +426,8 @@ EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelPrint(void*, const INT_PTR numParams, EEL_
 }
 
 EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelPrintMem(EEL_F** blocks, EEL_F* start, EEL_F* length) {
-    // this is EEL's way of converting a double to an index/offset...
-    const int offset = static_cast<int>(*start + 0.0001);
-    const int size = static_cast<int>(*length + 0.0001);
-
-    if (offset < 0 || size < 0) {
-        return start;
-    }
-
-    // check to make sure we don't cross a boundary
-    if ((offset / NSEEL_RAM_ITEMSPERBLOCK) != ((offset + size - 1) / NSEEL_RAM_ITEMSPERBLOCK)) {
-        return start;
-    }
-
-    EEL_F* data = __NSEEL_RAMAlloc(blocks, offset);
-    if (!data || data == &nseel_ramalloc_onfail) {
+    auto [data, size] = getMemoryData(blocks, start, length);
+    if (!data) {
         return start;
     }
 

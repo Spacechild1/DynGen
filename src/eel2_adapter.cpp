@@ -1,16 +1,19 @@
 #include "eel2_adapter.h"
+#include "math_utils.h"
 
 #include "ns-eel-addfuncs.h"
 #include "ns-eel-int.h"
 #include "eel_fft.h"
 #include "eel_mdct.h"
 
+#include "clz.h"
 #include "SC_InlineBinaryOp.h"
 #include "SC_InterfaceTable.h"
 #include "SC_Unit.h"
 
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <charconv>
 
 // The following is copied from SC_SndBuf.h
@@ -74,6 +77,12 @@ void EEL2Adapter::setup() {
     // inputs and outputs
     NSEEL_addfunc_retval("in", 1, NSEEL_PProc_THIS, &eelIn);
     NSEEL_addfunc_retptr("out", 1, NSEEL_PProc_THIS, &eelOut);
+
+    // FFT
+    NSEEL_addfunc_retptr("fft_complex", 2, NSEEL_PProc_RAM, &eelFFTComplex);
+    NSEEL_addfunc_retptr("fft_polar", 2, NSEEL_PProc_RAM, &eelFFTPolar);
+    NSEEL_addfunc_retptr("window_hann", 2, NSEEL_PProc_RAM, &eelWindowHann);
+    NSEEL_addfunc_retptr("window_sine", 2, NSEEL_PProc_RAM, &eelWindowSine);
 
     // misc
     NSEEL_addfunc_varparm("print", 0, NSEEL_PProc_THIS, &eelPrint);
@@ -407,6 +416,155 @@ static std::pair<double*, size_t> getMemoryData(EEL_F** blocks, EEL_F* start, EE
     }
 
     return { data, size };
+}
+
+EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelFFTPolar(EEL_F** blocks, EEL_F* start, EEL_F* length) {
+    auto [data, size] = getMemoryData(blocks, start, length);
+    if (!data) {
+        return start;
+    }
+
+    if (!ISPOWEROFTWO(size)) {
+        return start;
+    }
+
+    const size_t fullSize = size * 2;
+    const size_t minSize = 1ULL << EEL_FFT_MINBITLEN;
+    // unroll loop by min. FFT size
+    const size_t unroll = minSize * 2;
+
+    if (size < minSize) {
+        return start;
+    }
+
+    // tell the compiler that our data will never alias the LUT.
+    double* __restrict ptr = data;
+
+    // In a real-valued FFT, the first two bins represent DC and Nyquist.
+    // Since they do not form a complex number, we have to keep them as
+    // they are, effectively storing them as 'signed magnitudes'.
+    double dc = ptr[0];
+    double ny = ptr[1];
+
+    for (size_t i = 0; i < fullSize; i += unroll) {
+        // unroll loop by min. FFT size
+        for (size_t k = 0; k < unroll; k += 2) {
+            double real = ptr[i + k];
+            double imag = ptr[i + k + 1];
+            auto [mag, phase] = complexToPolar(real, imag);
+            ptr[i + k] = mag;
+            ptr[i + k + 1] = phase;
+        }
+    }
+
+    // restore DC and Nyquist
+    ptr[0] = dc;
+    ptr[1] = ny;
+
+    return start;
+}
+
+EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelFFTComplex(EEL_F** blocks, EEL_F* start, EEL_F* length) {
+    auto [data, size] = getMemoryData(blocks, start, length);
+    if (!data) {
+        return start;
+    }
+
+    if (!ISPOWEROFTWO(size)) {
+        return start;
+    }
+
+    const size_t fullSize = size * 2;
+    const size_t minSize = 1ULL << EEL_FFT_MINBITLEN;
+    // unroll loop by min. FFT size
+    const size_t unroll = minSize * 2;
+
+    if (size < minSize) {
+        return start;
+    }
+
+    // tell the compiler that our data will never alias the LUT.
+    double* __restrict ptr = data;
+
+    // See comment in eelFFTPolar()
+    double dc = ptr[0];
+    double ny = ptr[1];
+
+    for (size_t i = 0; i < fullSize; i += unroll) {
+        for (size_t k = 0; k < unroll; k += 2) {
+            double mag = ptr[i + k];
+            double phase = ptr[i + k + 1];
+            auto [real, imag] = polarToComplex(mag, phase);
+            // fast approximation
+            ptr[i + k] = real;
+            ptr[i + k + 1] = imag;
+        }
+    }
+
+    // restore DC and Nyquist
+    ptr[0] = dc;
+    ptr[1] = ny;
+
+    return start;
+}
+
+static void applyWindow(double* __restrict data, size_t size, const double* __restrict winTab, size_t winSize) {
+    const size_t minSize = 1ULL << EEL_FFT_MINBITLEN;
+
+    if (size > winSize) {
+        // linear interpolation
+        const double stride = static_cast<double>(winSize) / size;
+        for (size_t i = 0; i < size; i += minSize) {
+            // unroll loop by min. FFT size
+            for (size_t k = 0; k < minSize; ++k) {
+                double findex = static_cast<double>(i + k) * stride;
+                double value = detail::readTableLin(winTab, findex);
+                data[i + k] *= value;
+            }
+        }
+    } else {
+        // 'stride' is always a power-of-two, so can do a bitshift instead of a multiplication.
+        const size_t stride = winSize / size;
+        assert(stride > 0 && ISPOWEROFTWO(stride));
+        const size_t strideBits = NUMBITS(stride) - 1;
+        for (size_t i = 0; i < size; i += minSize) {
+            // unroll loop by min. FFT size
+            for (size_t k = 0; k < minSize; ++k) {
+                size_t index = (i + k) << strideBits;
+                data[i + k] *= winTab[index];
+            }
+        }
+    }
+}
+
+EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowHann(EEL_F** blocks, EEL_F* start, EEL_F* length) {
+    auto [data, size] = getMemoryData(blocks, start, length);
+    if (!data) {
+        return start;
+    }
+
+    if (!ISPOWEROFTWO(size)) {
+        return start;
+    }
+
+    applyWindow(data, size, detail::gHannTable, detail::kHannTableSize);
+
+    return start;
+}
+
+EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowSine(EEL_F** blocks, EEL_F* start, EEL_F* length) {
+    auto [data, size] = getMemoryData(blocks, start, length);
+    if (!data) {
+        return start;
+    }
+
+    if (!ISPOWEROFTWO(size)) {
+        return start;
+    }
+
+    applyWindow(data, size, detail::gSineTable, detail::kSineTableSize / 2);
+
+    return start;
 }
 
 EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelPrint(void*, const INT_PTR numParams, EEL_F** params) {

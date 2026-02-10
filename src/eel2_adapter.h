@@ -54,6 +54,11 @@ public:
     static EEL_F eelHistory(void*, EEL_F* state, EEL_F* signal);
     static EEL_F eelLatch(void*, EEL_F* state, EEL_F* signal, EEL_F* trigger);
 
+    static EEL_F_PTR eelFFTPolar(EEL_F** blocks, EEL_F* start, EEL_F* length);
+    static EEL_F_PTR eelFFTComplex(EEL_F** blocks, EEL_F* start, EEL_F* length);
+    static EEL_F_PTR eelWindowHann(EEL_F** blocks, EEL_F* start, EEL_F* length);
+    static EEL_F_PTR eelWindowSine(EEL_F** blocks, EEL_F* start, EEL_F* length);
+
     static EEL_F eelPrint(void*, INT_PTR numParams, EEL_F** params);
     static EEL_F_PTR eelPrintMem(EEL_F** blocks, EEL_F* start, EEL_F* length);
     static EEL_F eelPoll(void* opaque, INT_PTR numParams, EEL_F** params);

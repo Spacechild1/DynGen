@@ -5,9 +5,9 @@
 #include "eel_fft.h"
 #include "eel_mdct.h"
 
-#include <SC_InlineBinaryOp.h>
-#include <SC_InterfaceTable.h>
-#include <SC_Unit.h>
+#include "SC_InlineBinaryOp.h"
+#include "SC_InterfaceTable.h"
+#include "SC_Unit.h"
 
 #include <array>
 #include <atomic>

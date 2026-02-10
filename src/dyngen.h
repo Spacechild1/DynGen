@@ -2,7 +2,7 @@
 
 #include "library.h"
 
-#include <SC_PlugIn.hpp>
+#include "SC_PlugIn.hpp"
 
 struct EEL2Adapter;
 

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.15)
 project(DynGen)
 set(CMAKE_CXX_STANDARD 17)
 
+include(CTest)
+
 #--------------------- options ---------------------------#
 
 # SuperCollider API:
@@ -110,8 +112,10 @@ target_sources(DynGen_common INTERFACE
         src/dyngen.h src/dyngen.cpp
         src/eel2_adapter.h src/eel2_adapter.cpp
         src/library.h src/library.cpp
+        src/math_utils.h
 )
 
+target_include_directories(DynGen_common INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(DynGen_common INTERFACE "${SC_PATH}/include/plugin_interface")
 target_include_directories(DynGen_common INTERFACE "${SC_PATH}/include/common")
 
@@ -169,3 +173,9 @@ endif()
 install(DIRECTORY "src/Classes" DESTINATION "${INSTALL_DIR}")
 install(DIRECTORY "src/HelpSource" DESTINATION "${INSTALL_DIR}")
 install(FILES "README.md" "LICENSE" DESTINATION "${INSTALL_DIR}")
+
+#-------------------------- tests ----------------------------#
+
+if (BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

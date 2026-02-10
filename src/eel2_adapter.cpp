@@ -90,6 +90,17 @@ EEL2Adapter::EEL2Adapter(uint32 numInputChannels, uint32 numOutputChannels, int 
     mWorld(world),
     mParent(parent) {}
 
+EEL2Adapter::~EEL2Adapter() {
+    if (mSampleCode)
+        NSEEL_code_free(mSampleCode);
+    if (mInitCode)
+        NSEEL_code_free(mInitCode);
+    if (mBlockCode)
+        NSEEL_code_free(mBlockCode);
+    if (mEelState)
+        NSEEL_VM_free(mEelState);
+}
+
 // this is not RT safe
 bool EEL2Adapter::init(const DynGenScript& script, const int* parameterIndices, int numParamIndices) {
     mEelState = NSEEL_VM_alloc();
@@ -479,15 +490,4 @@ EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelPoll(void* opaque, const INT_PTR numParams
 
     // return first argument
     return *params[0];
-}
-
-EEL2Adapter::~EEL2Adapter() {
-    if (mSampleCode)
-        NSEEL_code_free(mSampleCode);
-    if (mInitCode)
-        NSEEL_code_free(mInitCode);
-    if (mBlockCode)
-        NSEEL_code_free(mBlockCode);
-    if (mEelState)
-        NSEEL_VM_free(mEelState);
 }

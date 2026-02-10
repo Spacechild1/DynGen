@@ -11,18 +11,25 @@ int main() {
         2048, 4096, 8192, 16384, 32768
     };
 
+    std::vector<double> buffer;
+
     const double maxAllowedErrorNormalized = 0.00001;
 
     // test Hann window with several window sizes
     for (const auto bufferSize : bufferSizes) {
-        const double toIndex = static_cast<double>(detail::kHannTableSize) / bufferSize;
-        const double toPhase = M_PI * 2.0 / bufferSize;
         double minError = std::numeric_limits<double>::max();
         double maxError = 0.0;
         double avgError = 0.0;
 
+        buffer.resize(bufferSize);
+        std::fill(buffer.begin(), buffer.end(), 1.0);
+
+        applyHannWindow<16>(buffer.data(), buffer.size());
+
+        const double toPhase = M_PI * 2.0 / bufferSize;
+
         for (int i = 0; i < bufferSize; ++i) {
-            double a = detail::readTableLin(detail::gHannTable, i * toIndex);
+            double a = buffer[i];
             double b = std::cos(i * toPhase) * -0.5 + 0.5;
             double err = std::abs(a - b);
 #if 0
@@ -50,14 +57,19 @@ int main() {
 
     // test sine window with several window sizes
     for (const auto bufferSize : bufferSizes) {
-        const double toIndex = static_cast<double>(detail::kSineTableSize / 2) / bufferSize;
-        const double toPhase = M_PI / bufferSize;
         double minError = std::numeric_limits<double>::max();
         double maxError = 0.0;
         double avgError = 0.0;
 
+        buffer.resize(bufferSize);
+        std::fill(buffer.begin(), buffer.end(), 1.0);
+
+        applySineWindow<16>(buffer.data(), buffer.size());
+
+        const double toPhase = M_PI / bufferSize;
+
         for (int i = 0; i < bufferSize; ++i) {
-            double a = detail::readTableLin(detail::gSineTable, i * toIndex);
+            double a = buffer[i];
             double b = std::sin(i * toPhase);
             double err = std::abs(a - b);
 #if 0

@@ -47,6 +47,7 @@ extern "C" void NSEEL_HOSTSTUB_EnterMutex() {
 
 extern "C" void NSEEL_HOSTSTUB_LeaveMutex() { g_spinlock.store(0, std::memory_order_release); }
 
+constexpr size_t kMinFFTSize = 1ULL << EEL_FFT_MINBITLEN;
 
 void EEL2Adapter::setup() {
     EEL_fft_register();
@@ -508,34 +509,7 @@ EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelFFTComplex(EEL_F** blocks, EEL_F* star
     return start;
 }
 
-static void applyWindow(double* __restrict data, size_t size, const double* __restrict winTab, size_t winSize) {
-    const size_t minSize = 1ULL << EEL_FFT_MINBITLEN;
 
-    if (size > winSize) {
-        // linear interpolation
-        const double stride = static_cast<double>(winSize) / size;
-        for (size_t i = 0; i < size; i += minSize) {
-            // unroll loop by min. FFT size
-            for (size_t k = 0; k < minSize; ++k) {
-                double findex = static_cast<double>(i + k) * stride;
-                double value = detail::readTableLin(winTab, findex);
-                data[i + k] *= value;
-            }
-        }
-    } else {
-        // 'stride' is always a power-of-two, so can do a bitshift instead of a multiplication.
-        const size_t stride = winSize / size;
-        assert(stride > 0 && ISPOWEROFTWO(stride));
-        const size_t strideBits = NUMBITS(stride) - 1;
-        for (size_t i = 0; i < size; i += minSize) {
-            // unroll loop by min. FFT size
-            for (size_t k = 0; k < minSize; ++k) {
-                size_t index = (i + k) << strideBits;
-                data[i + k] *= winTab[index];
-            }
-        }
-    }
-}
 
 EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowHann(EEL_F** blocks, EEL_F* start, EEL_F* length) {
     auto [data, size] = getMemoryData(blocks, start, length);
@@ -547,7 +521,7 @@ EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowHann(EEL_F** blocks, EEL_F* star
         return start;
     }
 
-    applyWindow(data, size, detail::gHannTable, detail::kHannTableSize);
+    applyHannWindow<kMinFFTSize>(data, size);
 
     return start;
 }
@@ -562,7 +536,7 @@ EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowSine(EEL_F** blocks, EEL_F* star
         return start;
     }
 
-    applyWindow(data, size, detail::gSineTable, detail::kSineTableSize / 2);
+    applySineWindow<kMinFFTSize>(data, size);
 
     return start;
 }

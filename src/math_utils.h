@@ -1,5 +1,8 @@
 #pragma once
 
+#include "clz.h"
+
+#include <cassert>
 #include <cmath>
 #include <utility>
 
@@ -91,6 +94,33 @@ inline double fastCos(double rad) {
 
 #endif
 
+template<size_t unroll>
+inline void applyWindow(double* __restrict data, size_t size, const double* __restrict winTab, size_t winSize) {
+    if (size > winSize) {
+        // linear interpolation
+        const double stride = static_cast<double>(winSize) / size;
+        for (size_t i = 0; i < size; i += unroll) {
+            for (size_t k = 0; k < unroll; ++k) {
+                double findex = static_cast<double>(i + k) * stride;
+                double value = readTableLin(winTab, findex);
+                data[i + k] *= value;
+            }
+        }
+    } else {
+        // 'stride' is always a power-of-two, so can do a bitshift instead of a multiplication.
+        const size_t stride = winSize / size;
+        assert(stride > 0 && ISPOWEROFTWO(stride));
+        const size_t strideBits = NUMBITS(stride) - 1;
+        for (size_t i = 0; i < size; i += unroll) {
+            // unroll loop by min. FFT size
+            for (size_t k = 0; k < unroll; ++k) {
+                size_t index = (i + k) << strideBits;
+                data[i + k] *= winTab[index];
+            }
+        }
+    }
+}
+
 inline bool lutInitialized = []() {
     using namespace detail;
 
@@ -175,4 +205,18 @@ inline std::pair<double, double> polarToComplex(double mag, double phase) {
     double real = mag * detail::fastCos(phase);
     double imag = mag * detail::fastSin(phase);
     return { real, imag };
+}
+
+/*! @brief apply a Hann window to the given buffer.
+ *  The buffer size must be a power of two. */
+template<size_t unroll>
+inline void applyHannWindow(double* buffer, size_t size) {
+    detail::applyWindow<unroll>(buffer, size, detail::gHannTable, detail::kHannTableSize);
+}
+
+/*! @brief apply a (half-)sine window to the given buffer.
+ *  The buffer size must be a power of two. */
+template<size_t unroll>
+inline void applySineWindow(double* buffer, size_t size) {
+    detail::applyWindow<unroll>(buffer, size, detail::gSineTable, detail::kSineTableSize / 2);
 }

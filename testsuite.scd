@@ -42,6 +42,11 @@
 		\testHistory,
 		\testLatch,
 
+		// power-of-two function tests
+		\testIsPowerOfTwo,
+		\testNextPowerOfTwo,
+		\testPrevPowerOfTwo,
+
 		// sclang tests
 		\testRemoveComments,
 		\testExtractParameters,
@@ -774,9 +779,7 @@
 		var success = false;
 		var condition = Condition();
 
-		DynGenDef(\testWrongDelta, "
-out0 = delta(0.5, in0);
-").send;
+		DynGenDef(\testWrongDelta, "out0 = delta(0.5, in0);").send;
 		s.sync;
 		{
 			DynGen.ar(1, \testWrongDelta, Integrator.ar(DC.ar(0.1)), sync: 1.0);
@@ -797,9 +800,7 @@ out0 = delta(0.5, in0);
 		var success = false;
 		var condition = Condition();
 
-		DynGenDef(\testWrongDeltaInput, "
-out0 = delta(in0, in0);
-").send;
+		DynGenDef(\testWrongDeltaInput, "out0 = delta(in0, in0);").send;
 		s.sync;
 		{
 			DynGen.ar(1, \testWrongDeltaInput, Integrator.ar(DC.ar(0.1)), sync: 1.0);
@@ -818,9 +819,7 @@ out0 = delta(in0, in0);
 		var success = false;
 		var condition = Condition();
 
-		DynGenDef(\testWrongDeltaOutput, "
-out0 = delta(out0, in0);
-").send;
+		DynGenDef(\testWrongDeltaOutput, "out0 = delta(out0, in0);").send;
 		s.sync;
 		{
 			DynGen.ar(1, \testWrongDeltaOutput, Integrator.ar(DC.ar(0.1)), sync: 1.0);
@@ -837,9 +836,7 @@ out0 = delta(out0, in0);
 		var success = false;
 		var condition = Condition();
 
-		DynGenDef(\testDelta, "
-out0 = delta(x, in0);
-").send;
+		DynGenDef(\testDelta, "out0 = delta(x, in0);").send;
 		s.sync;
 		{
 			DynGen.ar(1, \testDelta, Integrator.ar(DC.ar(0.1)), sync: 1.0);
@@ -856,9 +853,7 @@ out0 = delta(x, in0);
 		var success = false;
 		var condition = Condition();
 
-		DynGenDef(\testHistory, "
-out0 = history(x, in0) - in0;
-").send;
+		DynGenDef(\testHistory, "out0 = history(x, in0) - in0;").send;
 		s.sync;
 		{
 			DynGen.ar(1, \testHistory, Integrator.ar(DC.ar(0.1)), sync: 1.0);
@@ -875,14 +870,121 @@ out0 = history(x, in0) - in0;
 		var success = false;
 		var condition = Condition();
 
-		DynGenDef(\testLatch, "
-out0 = latch(x, in0, _trigger);
-").send;
+		DynGenDef(\testLatch, "out0 = latch(x, in0, _trigger);").send;
 		s.sync;
 		{
 			DynGen.ar(1, \testLatch, LFPulse.ar(800.0), [trigger: Impulse.ar(800.0)], sync: 1.0);
 		}.loadToFloatArray(0.1, action: {|sig|
 			success = sig.every({|x| (x-1.0) < 0.001});
+			condition.unhang;
+		});
+		condition.hang;
+
+		success;
+	},
+
+	// power-of-two function tests
+
+	testIsPowerOfTwo: {
+		var success = false;
+		var condition = Condition();
+
+		DynGenDef(\testIsPowerOfTwo, "
+            @init
+            i = -4;
+            @sample
+            out0 = i;
+            out1 = isPowerOfTwo(i);
+            i += 1;"
+		).send;
+		s.sync;
+		{
+			DynGen.ar(2, \testIsPowerOfTwo, sync: 1.0);
+		}.loadToFloatArray(0.02, action: {|sig|
+			success = sig.clump(2).every {|x|
+				var a = x[0];
+				var b = x[1];
+				// postf("a: %, b: %\n", a, b);
+				if (a != 0) {
+					a.asInteger.isPowerOfTwo == b.asBoolean;
+				} {
+					// 0.isPowerOfTwo wrongly returns true...
+					b == 0.0;
+				}
+			};
+			condition.unhang;
+		});
+		condition.hang;
+
+		success;
+	},
+
+	testNextPowerOfTwo: {
+		var success = false;
+		var condition = Condition();
+
+		DynGenDef(\testNextPowerOfTwo, "
+            @init
+            i = -4;
+            @sample
+            out0 = i;
+            out1 = nextPowerOfTwo(i);
+            i += 1;"
+		).send;
+		s.sync;
+		{
+			DynGen.ar(2, \testNextPowerOfTwo, sync: 1.0);
+		}.loadToFloatArray(0.02, action: {|sig|
+			success = sig.clump(2).every {|x|
+				var a = x[0];
+				var b = x[1];
+				// postf("a: %, b: %\n", a, b);
+				a.asInteger.nextPowerOfTwo == b;
+			};
+			condition.unhang;
+		});
+		condition.hang;
+
+		success;
+	},
+
+	testPrevPowerOfTwo: {
+		var success = false;
+		var condition = Condition();
+		// sclang's previousPowerOf() method is just wrong,
+		// so we have to write it ourselves...
+		// Note that our prevPowerOfTwo() function always
+		// clamps the result between 1 and 2^31.
+		var prevPowerOfTwo = {|x|
+			if (x >= 1) {
+				1 << (x.asInteger.numBits - 1); // bit ceil
+			} { 1 };
+		};
+
+		DynGenDef(\testPrevPowerOfTwo, "
+            @init
+            i = -4;
+            @sample
+            out0 = i;
+            out1 = prevPowerOfTwo(i);
+            i += 1;"
+		).send;
+		s.sync;
+		{
+			DynGen.ar(2, \testPrevPowerOfTwo, sync: 1.0);
+		}.loadToFloatArray(0.02, action: {|sig|
+			success = sig.clump(2).every {|x|
+				var a = x[0];
+				var b = x[1];
+				if (a >= 2.0) {
+					prevPowerOfTwo.(a) == b;
+				} {
+					// a.previousPowerOf(2) returns wrong results
+					// for values smaller than 2.0!
+
+					b == 1.0;
+				}
+			};
 			condition.unhang;
 		});
 		condition.hang;

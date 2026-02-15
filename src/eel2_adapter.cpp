@@ -79,6 +79,11 @@ void EEL2Adapter::setup() {
     NSEEL_addfunc_retval("in", 1, NSEEL_PProc_THIS, &eelIn);
     NSEEL_addfunc_retptr("out", 1, NSEEL_PProc_THIS, &eelOut);
 
+    // power-of-two
+    NSEEL_addfunc_retbool("isPowerOfTwo", 1, NSEEL_PProc_THIS, &eelIsPowerOfTwo);
+    NSEEL_addfunc_retval("prevPowerOfTwo", 1, NSEEL_PProc_THIS, &eelPrevPowerOfTwo);
+    NSEEL_addfunc_retval("nextPowerOfTwo", 1, NSEEL_PProc_THIS, &eelNextPowerOfTwo);
+
     // FFT
     NSEEL_addfunc_retptr("fft_complex", 2, NSEEL_PProc_RAM, &eelFFTComplex);
     NSEEL_addfunc_retptr("fft_polar", 2, NSEEL_PProc_RAM, &eelFFTPolar);
@@ -394,6 +399,30 @@ EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelLatch(void*, EEL_F* state, EEL_F* signal, 
         *state = *signal;
     }
     return *state;
+}
+
+int NSEEL_CGEN_CALL EEL2Adapter::eelIsPowerOfTwo(void*, EEL_F* in) {
+    if (*in >= 1.0 && *in <= static_cast<double>(INT32_MAX)) {
+        return ISPOWEROFTWO(static_cast<int32_t>(*in));
+    } else {
+        return 0;
+    }
+}
+
+EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelPrevPowerOfTwo(void*, EEL_F* in) {
+    if (*in >= 1.0 && *in <= static_cast<double>(INT32_MAX)) {
+        return PREVIOUSPOWEROFTWO(static_cast<int32_t>(*in));
+    } else {
+        return 1.0;
+    }
+}
+
+EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelNextPowerOfTwo(void*, EEL_F* in) {
+    if (*in >= 1.0 && *in <= static_cast<double>(INT32_MAX)) {
+        return NEXTPOWEROFTWO(static_cast<int32_t>(*in));
+    } else {
+        return 1.0;
+    }
 }
 
 // we have to use double* instead of EEL_F* to avoid warnings about attributes in template arguments.

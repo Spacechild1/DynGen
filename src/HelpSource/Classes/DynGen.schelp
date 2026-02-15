@@ -417,6 +417,9 @@ TABLE::
 ## CODE::mod(in, hi):: || Mod of a float signal, see LINK::Classes/SimpleNumber#-mod::. EEL2's internal CODE::%:: only operates on an integer level.
 ## CODE::lin(x, a, b):: || Linear interpolation between values a and b using MATH::a + x(b - a)::.
 ## CODE::cubic(x, a, b, c, d):: || A 4-point, 3rd-order Hermite interpolation at position x.
+## CODE::isPowerOfTwo(in):: || Returns 1.0 if the input is a power-of-two, otherwise returns 0.0. The input is rounded down to the nearest integer value.
+## CODE::nextPowerOfTwo(in):: || Returns the nearest power-of-two that is greater than or equal to the input. If the input is negative, the function returns 1.0 (= the smallest power-of-two).
+## CODE::prevPowerOfTwo(in):: || Returns the nearest power-of-two that is less than or equal to the input. If the input is less than 1, the function returns 1.0 (= the smallest power-of-two).
 ::
 
 EMPHASIS::State:::

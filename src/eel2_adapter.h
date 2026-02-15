@@ -54,6 +54,10 @@ public:
     static EEL_F eelHistory(void*, EEL_F* state, EEL_F* signal);
     static EEL_F eelLatch(void*, EEL_F* state, EEL_F* signal, EEL_F* trigger);
 
+    static int eelIsPowerOfTwo(void*, EEL_F* in);
+    static EEL_F eelPrevPowerOfTwo(void*, EEL_F* in);
+    static EEL_F eelNextPowerOfTwo(void*, EEL_F* in);
+
     static EEL_F_PTR eelFFTPolar(EEL_F** blocks, EEL_F* start, EEL_F* length);
     static EEL_F_PTR eelFFTComplex(EEL_F** blocks, EEL_F* start, EEL_F* length);
     static EEL_F_PTR eelWindowHann(EEL_F** blocks, EEL_F* start, EEL_F* length);

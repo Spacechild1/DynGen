@@ -398,21 +398,31 @@ EEL_F EEL2Adapter::eelLatch(void*, EEL_F* state, EEL_F* signal, EEL_F* trigger) 
 
 // we have to use double* instead of EEL_F* to avoid warnings about attributes in template arguments.
 static std::pair<double*, size_t> getMemoryData(EEL_F** blocks, EEL_F* start, EEL_F* length) {
-    // this is EEL's way of converting a double to an index/offset...
-    const int offset = static_cast<int>(*start + 0.0001);
-    const int size = static_cast<int>(*length + 0.0001);
+    if (*start < 0.0 || *start > static_cast<double>(INT32_MAX)) {
+        Print("ERROR: memory offset %f out-of-range\n", *start);
+        return { nullptr, 0 };
+    }
 
-    if (offset < 0 || size < 0) {
+    if (*length < 0.0 || *length > static_cast<double>(INT32_MAX)) {
+        Print("ERROR: bad length %f\n", *length);
+        return { nullptr, 0 };
+    }
+
+    const auto offset = static_cast<int32_t>(*start);
+    const auto size = static_cast<int32_t>(*length);
+    if (size < 1) {
         return { nullptr, 0 };
     }
 
     // check to make sure we don't cross a boundary
     if ((offset / NSEEL_RAM_ITEMSPERBLOCK) != ((offset + size - 1) / NSEEL_RAM_ITEMSPERBLOCK)) {
+        Print("ERROR: buffer operation would cross block boundaries\n");
         return { nullptr, 0 };
     }
 
     EEL_F* data = __NSEEL_RAMAlloc(blocks, offset);
     if (!data || data == &nseel_ramalloc_onfail) {
+        Print("ERROR: memory allocation failed\n");
         return { nullptr, 0 };
     }
 

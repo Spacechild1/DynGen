@@ -383,6 +383,8 @@ TABLE::
 ## CODE::blockSize:: || same as LINK::Classes/ServerOptions#-blockSize::
 ## CODE::numIn:: || the number of input channels
 ## CODE::numOut:: || the number of output channels
+## CODE::minFFTSize:: || the min. FFT size (16)
+## CODE::maxFFTSize:: || the max. FFT size (32768)
 ::
 
 SUBSECTION:: DynGen functions

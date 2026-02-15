@@ -48,6 +48,7 @@ extern "C" void NSEEL_HOSTSTUB_EnterMutex() {
 extern "C" void NSEEL_HOSTSTUB_LeaveMutex() { g_spinlock.store(0, std::memory_order_release); }
 
 constexpr size_t kMinFFTSize = 1ULL << EEL_FFT_MINBITLEN;
+const size_t kMaxFFTSize = 1ULL << EEL_FFT_MAXBITLEN;
 
 void EEL2Adapter::setup() {
     EEL_fft_register();
@@ -155,12 +156,15 @@ bool EEL2Adapter::init(const DynGenScript& script, const int* parameterIndices, 
     // set 'this' pointer for custom functions
     NSEEL_VM_SetCustomFuncThis(mEelState, this);
 
-    // set our script variables
+    // set our script constants/variables.
+    // constants:
     *NSEEL_VM_regvar(mEelState, "srate") = mSampleRate;
     *NSEEL_VM_regvar(mEelState, "blockSize") = mBlockSize;
     *NSEEL_VM_regvar(mEelState, "numIn") = mNumInputChannels;
     *NSEEL_VM_regvar(mEelState, "numOut") = mNumOutputChannels;
-
+    *NSEEL_VM_regvar(mEelState, "minFFTSize") = kMinFFTSize;
+    *NSEEL_VM_regvar(mEelState, "maxFFTSize") = kMaxFFTSize;
+    // variables:
     mBlockNum = NSEEL_VM_regvar(mEelState, "blockNum");
     mSampleNum = NSEEL_VM_regvar(mEelState, "sampleNum");
 

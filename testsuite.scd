@@ -9,10 +9,6 @@
 		\testDynamicIO,
 		\testParam,
 		\testMultiParam,
-		\testBufRead,
-		\testBufWrite,
-		\testBufInfo,
-		\testBufInfoOutOfRange,
 		\testVars,
 		\testConstants,
 		\testDelete,
@@ -23,6 +19,12 @@
 		\testParamsInitSection,
 		\testParamsBlockSection,
 		\testParamsInterpolation,
+
+		// buffer function tests
+		\testBufRead,
+		\testBufWrite,
+		\testBufInfo,
+		\testBufInfoOutOfRange,
 
 		// signal function tests
 		\testClip,
@@ -185,90 +187,6 @@
 			var left = (sig[1024] - pi).abs < 0.01;
 			var right = (sig[1025] - 2.0).abs < 0.01;
 			success = left.and(right);
-			condition.unhang;
-		});
-		condition.hang;
-		success;
-	},
-
-	testBufRead: {
-		var success = false;
-		var condition = Condition();
-		var buffer = Buffer.loadCollection(s, FloatArray.fill(100, pi));
-		DynGenDef(\testBufRead, "out0=bufRead(_bufnum, 0)").send;
-		s.sync;
-		{
-			DynGen.ar(1, \testBufRead, params: [bufnum: buffer]);
-		}.loadToFloatArray(0.2, action: {|sig|
-			success = sig.any({|x| (x-pi).abs < 0.01;});
-			condition.unhang;
-		});
-		condition.hang;
-		success;
-	},
-
-	testBufWrite: {
-		var success = false;
-		var condition = Condition();
-		var bufCondition = Condition();
-		var buffer = Buffer.loadCollection(s, FloatArray.fill(100, pi));
-
-		DynGenDef(\testBufWrite, "out0=bufWrite(_bufnum, 0, 0.5)").send;
-		s.sync;
-		{
-			DynGen.ar(1, \testBufWrite, params: [bufnum: buffer]);
-		}.loadToFloatArray(0.2, action: {
-			condition.unhang;
-		});
-		condition.hang;
-
-		buffer.get(0, {|x|
-			success = (x-0.5).abs < 0.01;
-			bufCondition.unhang;
-		});
-		bufCondition.hang;
-
-		success;
-	},
-
-	testBufInfo: {
-		var success = false;
-		var condition = Condition();
-		var buffer = Buffer.read(s, ExampleFiles.apollo11);
-
-		DynGenDef(\testBufInfo, "
-            out0=bufSampleRate(_bufnum);
-            out1=bufChannels(_bufnum);
-            out2=bufFrames(_bufnum);"
-		).send;
-		s.sync;
-		{
-			DynGen.ar(3, \testBufInfo, params: [bufnum: buffer], sync: 1.0);
-		}.loadToFloatArray(0.01, action: { |sig|
-			var sr = sig[0] == buffer.sampleRate;
-			var chans = sig[1] == buffer.numChannels;
-			var frames = sig[2] == buffer.numFrames;
-			success = sr.and(chans).and(frames);
-			condition.unhang;
-		});
-		condition.hang;
-		success;
-	},
-
-	testBufInfoOutOfRange: {
-		var success = false;
-		var condition = Condition();
-		var bufnum = s.options.numBuffers; // out of range
-		DynGenDef(\testBufInfoOutOfRange, "
-            out0=bufSampleRate(_bufnum);
-            out1=bufChannels(_bufnum);
-            out2=bufFrames(_bufnum);"
-		).send;
-		s.sync;
-		{
-			DynGen.ar(3, \testBufInfoOutOfRange, params: [bufnum: bufnum], sync: 1.0);
-		}.loadToFloatArray(0.01, action: { |sig|
-			success = sig[0..2].every(_ == 0.0);
 			condition.unhang;
 		});
 		condition.hang;
@@ -577,6 +495,92 @@
             out0 = _x; out1 = _y;"
 		);
 		result1.and(result2).and(result3);
+	},
+
+	// buffer functions tests
+
+	testBufRead: {
+		var success = false;
+		var condition = Condition();
+		var buffer = Buffer.loadCollection(s, FloatArray.fill(100, pi));
+		DynGenDef(\testBufRead, "out0=bufRead(_bufnum, 0)").send;
+		s.sync;
+		{
+			DynGen.ar(1, \testBufRead, params: [bufnum: buffer]);
+		}.loadToFloatArray(0.2, action: {|sig|
+			success = sig.any({|x| (x-pi).abs < 0.01;});
+			condition.unhang;
+		});
+		condition.hang;
+		success;
+	},
+
+	testBufWrite: {
+		var success = false;
+		var condition = Condition();
+		var bufCondition = Condition();
+		var buffer = Buffer.loadCollection(s, FloatArray.fill(100, pi));
+
+		DynGenDef(\testBufWrite, "out0=bufWrite(_bufnum, 0, 0.5)").send;
+		s.sync;
+		{
+			DynGen.ar(1, \testBufWrite, params: [bufnum: buffer]);
+		}.loadToFloatArray(0.2, action: {
+			condition.unhang;
+		});
+		condition.hang;
+
+		buffer.get(0, {|x|
+			success = (x-0.5).abs < 0.01;
+			bufCondition.unhang;
+		});
+		bufCondition.hang;
+
+		success;
+	},
+
+	testBufInfo: {
+		var success = false;
+		var condition = Condition();
+		var buffer = Buffer.read(s, ExampleFiles.apollo11);
+
+		DynGenDef(\testBufInfo, "
+            out0=bufSampleRate(_bufnum);
+            out1=bufChannels(_bufnum);
+            out2=bufFrames(_bufnum);"
+		).send;
+		s.sync;
+		{
+			DynGen.ar(3, \testBufInfo, params: [bufnum: buffer], sync: 1.0);
+		}.loadToFloatArray(0.01, action: { |sig|
+			var sr = sig[0] == buffer.sampleRate;
+			var chans = sig[1] == buffer.numChannels;
+			var frames = sig[2] == buffer.numFrames;
+			success = sr.and(chans).and(frames);
+			condition.unhang;
+		});
+		condition.hang;
+		success;
+	},
+
+	testBufInfoOutOfRange: {
+		var success = false;
+		var condition = Condition();
+		var bufnum = s.options.numBuffers; // out of range
+		DynGenDef(\testBufInfoOutOfRange, "
+            out0=bufSampleRate(_bufnum);
+            out1=bufChannels(_bufnum);
+            out2=bufFrames(_bufnum);"
+		).send;
+		s.sync;
+		{
+			DynGen.ar(3, \testBufInfoOutOfRange, params: [bufnum: bufnum], sync: 1.0);
+		}.loadToFloatArray(0.01, action: { |sig|
+			success = sig[0..2].every(_ == 0.0);
+			condition.unhang;
+		});
+		condition.hang;
+		success;
 	},
 
 	// signal function tests

@@ -389,7 +389,7 @@ EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelHistory(void*, EEL_F* state, EEL_F* signal
     return history;
 }
 
-EEL_F EEL2Adapter::eelLatch(void*, EEL_F* state, EEL_F* signal, EEL_F* trigger) {
+EEL_F NSEEL_CGEN_CALL EEL2Adapter::eelLatch(void*, EEL_F* state, EEL_F* signal, EEL_F* trigger) {
     if (*trigger != 0.0) {
         *state = *signal;
     }

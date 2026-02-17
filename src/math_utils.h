@@ -37,15 +37,19 @@ constexpr size_t kSineTableMask = kSineTableSize - 1;
 constexpr double kSinePhaseToIndex = static_cast<double>(kSineTableSize) / TWO_PI;
 constexpr size_t kPolarTableSize2 = kPolarTableSize / 2;
 
-// QUESTION: should we use floats to reduce memory/cache usage?
+// We use floats to minimize memory/cache usage. For our approximations, the extra
+// precision of doubles would be negligible. This can be verified by running the tests,
+// which calculate the max. magnitude and phase errors (compared to the math functions
+// in the C++ standard library).
+using LUTType = float;
 // NOTE: the sine table has additional pi/2 values so it also works as a cosine table.
-inline double gSineTable[kSineTableRealSize + 1];
-inline double gMagTable[kPolarTableSize + 1];
-inline double gPhaseTable[kPolarTableSize + 1];
-inline double gHannTable[kHannTableSize + 1];
+inline LUTType gSineTable[kSineTableRealSize + 1];
+inline LUTType gMagTable[kPolarTableSize + 1];
+inline LUTType gPhaseTable[kPolarTableSize + 1];
+inline LUTType gHannTable[kHannTableSize + 1];
 
 // NOTE: 'findex' is supposed to be in the range of the table
-inline double readTableLin(const double* tab, double findex) {
+inline double readTableLin(const LUTType* tab, double findex) {
     size_t index = static_cast<size_t>(findex);
     double fract = findex - static_cast<double>(index);
     double a = tab[index];
@@ -95,7 +99,7 @@ inline double fastCos(double rad) {
 #endif
 
 template<size_t unroll>
-inline void applyWindow(double* __restrict data, size_t size, const double* __restrict winTab, size_t winSize) {
+inline void applyWindow(double* __restrict data, size_t size, const LUTType* __restrict winTab, size_t winSize) {
     if (size > winSize) {
         // linear interpolation
         const double stride = static_cast<double>(winSize) / size;

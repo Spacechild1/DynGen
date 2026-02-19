@@ -61,6 +61,9 @@ public:
     static EEL_F_PTR eelFFTPolar(EEL_F** blocks, EEL_F* start, EEL_F* length);
     static EEL_F_PTR eelFFTComplex(EEL_F** blocks, EEL_F* start, EEL_F* length);
     static EEL_F_PTR eelWindowHann(EEL_F** blocks, EEL_F* start, EEL_F* length);
+    static EEL_F_PTR eelWindowHamming(EEL_F** blocks, EEL_F* start, EEL_F* length);
+    static EEL_F_PTR eelWindowBlackman(EEL_F** blocks, EEL_F* start, EEL_F* length);
+    static EEL_F_PTR eelWindowWelch(EEL_F** blocks, EEL_F* start, EEL_F* length);
     static EEL_F_PTR eelWindowSine(EEL_F** blocks, EEL_F* start, EEL_F* length);
 
     static EEL_F eelPrint(void*, INT_PTR numParams, EEL_F** params);

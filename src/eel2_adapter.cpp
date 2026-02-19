@@ -569,6 +569,51 @@ EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowHann(EEL_F** blocks, EEL_F* star
     return start;
 }
 
+EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowHamming(EEL_F** blocks, EEL_F* start, EEL_F* length) {
+    auto [data, size] = getMemoryData(blocks, start, length);
+    if (!data) {
+        return start;
+    }
+
+    if (!ISPOWEROFTWO(size)) {
+        return start;
+    }
+
+    applyHammingWindow<kMinFFTSize>(data, size);
+
+    return start;
+}
+
+EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowBlackman(EEL_F** blocks, EEL_F* start, EEL_F* length) {
+    auto [data, size] = getMemoryData(blocks, start, length);
+    if (!data) {
+        return start;
+    }
+
+    if (!ISPOWEROFTWO(size)) {
+        return start;
+    }
+
+    applyBlackmanWindow<kMinFFTSize>(data, size);
+
+    return start;
+}
+
+EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowWelch(EEL_F** blocks, EEL_F* start, EEL_F* length) {
+    auto [data, size] = getMemoryData(blocks, start, length);
+    if (!data) {
+        return start;
+    }
+
+    if (!ISPOWEROFTWO(size)) {
+        return start;
+    }
+
+    applyWelchWindow<kMinFFTSize>(data, size);
+
+    return start;
+}
+
 EEL_F_PTR NSEEL_CGEN_CALL EEL2Adapter::eelWindowSine(EEL_F** blocks, EEL_F* start, EEL_F* length) {
     auto [data, size] = getMemoryData(blocks, start, length);
     if (!data) {

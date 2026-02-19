@@ -31,11 +31,15 @@ constexpr size_t kSineTableSize = 8192;
 constexpr size_t kSineTableRealSize = kSineTableSize;
 constexpr size_t kPolarTableSize = 2048;
 #endif
-constexpr size_t kHannTableSize = 1024;
+constexpr size_t kWindowTableSize = 1024;
 
 constexpr size_t kSineTableMask = kSineTableSize - 1;
 constexpr double kSinePhaseToIndex = static_cast<double>(kSineTableSize) / TWO_PI;
 constexpr size_t kPolarTableSize2 = kPolarTableSize / 2;
+
+// window coefficents
+constexpr double kHammingWindowCoef = 0.54;
+constexpr double kBlackmanWindowCoef = 0.16;
 
 // We use floats to minimize memory/cache usage. For our approximations, the extra
 // precision of doubles would be negligible. This can be verified by running the tests,
@@ -46,7 +50,10 @@ using LUTType = float;
 inline LUTType gSineTable[kSineTableRealSize + 1];
 inline LUTType gMagTable[kPolarTableSize + 1];
 inline LUTType gPhaseTable[kPolarTableSize + 1];
-inline LUTType gHannTable[kHannTableSize + 1];
+inline LUTType gHannTable[kWindowTableSize + 1];
+inline LUTType gHammingTable[kWindowTableSize + 1];
+inline LUTType gBlackmanTable[kWindowTableSize + 1];
+inline LUTType gWelchTable[kWindowTableSize + 1];
 
 // NOTE: 'findex' is supposed to be in the range of the table
 inline double readTableLin(const LUTType* tab, double findex) {
@@ -128,11 +135,13 @@ inline void applyWindow(double* __restrict data, size_t size, const LUTType* __r
 inline bool lutInitialized = []() {
     using namespace detail;
 
+    // sine table
     for (int i = 0; i <= kSineTableRealSize; ++i) {
         double phase = i * TWO_PI / static_cast<double>(kSineTableSize);
         gSineTable[i] = std::sin(phase);
     }
 
+    // mag/phase tables
     for (int i = 0; i <= kPolarTableSize; ++i) {
         // compute atan over the range of -1, 1
         double offset = static_cast<double>(kPolarTableSize2);
@@ -144,9 +153,32 @@ inline bool lutInitialized = []() {
         gMagTable[i] = 1.0 / std::cos(angle);
     }
 
-    for (int i = 0; i <= kHannTableSize; ++i) {
-        double phase = i * TWO_PI / static_cast<double>(kSineTableSize);
+    // Hann window table
+    for (int i = 0; i <= kWindowTableSize; ++i) {
+        double phase = i * TWO_PI / static_cast<double>(kWindowTableSize);
         gHannTable[i] = 0.5 - std::cos(phase) * 0.5;
+    }
+
+    // Hamming window table
+    for (int i = 0; i <= kWindowTableSize; ++i) {
+        double phase = i * TWO_PI / static_cast<double>(kWindowTableSize);
+        gHammingTable[i] = kHammingWindowCoef - std::cos(phase) * (1.0 - kHammingWindowCoef);
+    }
+
+    // Blackman window table
+    for (int i = 0; i <= kWindowTableSize; ++i) {
+        double phase = i * TWO_PI / static_cast<double>(kWindowTableSize);
+        const double a0 = (1.0 - kBlackmanWindowCoef) * 0.5;
+        const double a1 = 0.5;
+        const double a2 = kBlackmanWindowCoef * 0.5;
+        gBlackmanTable[i] = a0 - a1 * std::cos(phase) + a2 * std::cos(phase * 2);
+    }
+
+    // Welch window table
+    for (int i = 0; i <= kWindowTableSize; ++i) {
+        const double halfSize = static_cast<double>(kWindowTableSize) * 0.5;
+        double temp = ((i - halfSize) / halfSize);
+        gWelchTable[i] = 1.0 - temp * temp;
     }
 
     return true;
@@ -215,7 +247,28 @@ inline std::pair<double, double> polarToComplex(double mag, double phase) {
  *  The buffer size must be a power of two. */
 template<size_t unroll>
 inline void applyHannWindow(double* buffer, size_t size) {
-    detail::applyWindow<unroll>(buffer, size, detail::gHannTable, detail::kHannTableSize);
+    detail::applyWindow<unroll>(buffer, size, detail::gHannTable, detail::kWindowTableSize);
+}
+
+/*! @brief apply a Hamming window to the given buffer.
+ *  The buffer size must be a power of two. */
+template<size_t unroll>
+inline void applyHammingWindow(double* buffer, size_t size) {
+    detail::applyWindow<unroll>(buffer, size, detail::gHammingTable, detail::kWindowTableSize);
+}
+
+/*! @brief apply a Blackman window to the given buffer.
+ *  The buffer size must be a power of two. */
+template<size_t unroll>
+inline void applyBlackmanWindow(double* buffer, size_t size) {
+    detail::applyWindow<unroll>(buffer, size, detail::gBlackmanTable, detail::kWindowTableSize);
+}
+
+/*! @brief apply a Welch window to the given buffer.
+ *  The buffer size must be a power of two. */
+template<size_t unroll>
+inline void applyWelchWindow(double* buffer, size_t size) {
+    detail::applyWindow<unroll>(buffer, size, detail::gWelchTable, detail::kWindowTableSize);
 }
 
 /*! @brief apply a (half-)sine window to the given buffer.

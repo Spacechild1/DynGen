@@ -391,14 +391,14 @@ SUBSECTION:: DynGen functions
 
 DynGen provides the following utility functions:
 
-EMPHASIS::Input/output:::
+Input/output:
 TABLE::
 ## STRONG::function:: || STRONG::comment::
 ## CODE::in(channel):: || reads the n-th input channel; out-of-range channels return 0.0
 ## CODE::out(channel):: || writes to the n-th output channel; out-of-range-channels are ignored
 ::
 
-EMPHASIS::Buffer access:::
+Buffer access:
 TABLE::
 ## STRONG::function:: || STRONG::comment::
 ## CODE::bufRead(bufNum, bufFrame, [bufChan]):: || reads the frame of a LINK::Classes/Buffer:: on the server. The CODE::bufChan:: parameter is optional and defaults to the 0-th channel. If the buffer does not exist or CODE::bufFrame/bufChan:: is out-of-bounds it will return 0.0.
@@ -410,7 +410,7 @@ TABLE::
 ## CODE::bufFrames(bufNum):: || returns the number of buffer frames (or 0.0 if CODE::bufNum:: is out-of-range)
 ::
 
-EMPHASIS::Math:::
+Math:
 TABLE::
 ## STRONG::function:: || STRONG::comment::
 ## CODE::clip(in, lo, [hi]):: || Clips the signal, see LINK::Classes/Float#-clip::. If only two arguments are provided, LINK::Classes/Float#-clip2:: will be applied.
@@ -424,7 +424,23 @@ TABLE::
 ## CODE::prevPowerOfTwo(in):: || Returns the nearest power-of-two that is less than or equal to the input. If the input is less than 1, the function returns 1.0 (= the smallest power-of-two).
 ::
 
-EMPHASIS::State:::
+FFT:
+TABLE::
+## STRONG::function:: || STRONG::comment::
+## CODE::fft_polar(buffer, numBins):: || converts the bins in the given FFT buffer from complex (real + imaginary part) to polar (magnitude + phase) representation. The buffer size is CODE::numBins * 2::.
+## CODE::fft_complex(buffer, numBins):: || converts the bins in the given FFT buffer from polar back to complex representation. The buffer size is CODE::numBins * 2::.
+::
+
+Windowing:
+TABLE::
+## CODE::window_hann(buffer, length):: || applies a Hann window to the given buffer.
+## CODE::window_hamming(buffer, length):: || applies a Hamming window to the given buffer.
+## CODE::window_blackman(buffer, length):: || applies a Blackman window to the given buffer.
+## CODE::window_welch(buffer, length):: || applies a Welch window to the given buffer.
+## CODE::window_sine(buffer, length):: || applies a (half-)sine window to the given buffer.
+::
+
+State:
 TABLE::
 ## STRONG::function:: || STRONG::comment::
 ## CODE::delta(state, signal):: || Returns the delta of CODE::signal:: by using an intermediate DynGen variable CODE::state:: to store the previous value of CODE::signal::. Equivalent to CODE::x = signal - state; state = signal;::, where CODE::x:: is the return value of the function.
@@ -432,7 +448,7 @@ TABLE::
 ## CODE::latch(state, signal, trigger):: || See LINK::Classes/Latch::. Holds the value of CODE::signal:: when CODE::trigger!=0.0::, which is different from LINK::Classes/Latch:: which triggers when the signal transitions from a non-positive to a positive value! The CODE::state:: variable is necessary to store the state of the latch. Equivalent to CODE::state = trigger ? signal : state; x = state;::, where CODE::x:: is the return value of the function. In order to set an initial value, set the CODE::state:: variable to the desired value in the CODE::@init:: section.
 ::
 
-EMPHASIS::Debugging:::
+Debugging:
 TABLE::
 ## STRONG::function:: || STRONG::comment::
 ## CODE::print(...):: || Print one or more numbers to the console.
